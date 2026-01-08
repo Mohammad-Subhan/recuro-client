@@ -46,6 +46,8 @@ const VideoPage = ({ params }: { params: Promise<{ id: string }> }) => {
                         <video
                             src="/videos/video.mp4"
                             controls={true}
+                            controlsList="nodownload"
+                            disablePictureInPicture                            
                             className="w-full h-full object-cover"
                         />
                         {/* Play Button Overlay */}
