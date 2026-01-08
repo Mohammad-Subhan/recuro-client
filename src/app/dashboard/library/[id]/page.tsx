@@ -10,7 +10,7 @@ type TabType = 'ai-tools' | 'transcription'
 
 const VideoPage = ({ params }: { params: Promise<{ id: string }> }) => {
     // const { id } = React.use(params);
-    const [activeTab, setActiveTab] = useState<TabType>('ai-tools')
+    const [activeTab, setActiveTab] = useState<TabType>('ai-tools');
 
     return (
         <div className="h-full w-full flex flex-col gap-[35px] pt-5">
@@ -43,24 +43,12 @@ const VideoPage = ({ params }: { params: Promise<{ id: string }> }) => {
                 <div className="flex-1 flex flex-col gap-6">
                     {/* Video Thumbnail/Player Placeholder */}
                     <div className="w-full aspect-video rounded-2xl overflow-hidden bg-bg-secondary relative cursor-pointer">
-                        <Image
-                            src="/images/test.png"
-                            alt="Video Thumbnail"
-                            fill
-                            className="object-cover"
+                        <video
+                            src="/videos/video.mp4"
+                            controls={true}
+                            className="w-full h-full object-cover"
                         />
                         {/* Play Button Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                            <div className="w-16 h-16 rounded-full bg-white/30 flex items-center justify-center cursor-pointer transition-all">
-                                <Image
-                                    src="/icons/play.svg"
-                                    alt="Play"
-                                    width={24}
-                                    height={24}
-                                    className="ml-1"
-                                />
-                            </div>
-                        </div>
                     </div>
 
                     {/* Description Section */}

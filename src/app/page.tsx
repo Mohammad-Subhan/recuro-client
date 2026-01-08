@@ -11,12 +11,12 @@ const LandingPage = () => {
 
   const features = [
     {
-      icon: "/icons/record.svg",
+      icon: "/icons/video-camera.svg",
       title: "Instant Recording",
       description: "Start recording your screen with just one click. No complex setup required."
     },
     {
-      icon: "/icons/ai.svg",
+      icon: "/icons/ai-light.svg",
       title: "AI-Powered Tools",
       description: "Automatically generate titles, descriptions, and transcriptions for your videos."
     },
@@ -26,7 +26,7 @@ const LandingPage = () => {
       description: "Keep all your recordings organized and easily accessible in one place."
     },
     {
-      icon: "/icons/upload.svg",
+      icon: "/icons/share.svg",
       title: "Easy Sharing",
       description: "Upload and share your recordings with anyone, anywhere, anytime."
     }
@@ -186,9 +186,9 @@ const LandingPage = () => {
           </div>
 
           {/* Pro Plan */}
-          <div className="relative p-8 rounded-2xl bg-bg-secondary border-1 border-text-placeholder hover:shadow-lg hover:shadow-text-placeholder/20 transition-all">
+          <div className="relative p-8 rounded-2xl bg-bg-secondary border-1 border-text hover:shadow-lg hover:shadow-text-placeholder/20 transition-all">
             {/* Popular Badge */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-text-placeholder text-bg text-sm font-semibold rounded-full">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-button text-bg text-sm font-semibold rounded-full">
               Most Popular
             </div>
 
@@ -225,7 +225,7 @@ const LandingPage = () => {
 
             <Button
               onClick={() => router.push('/register')}
-              className="w-full h-12 rounded-2xl bg-text-placeholder hover:bg-text-placeholder/90 text-bg cursor-pointer font-semibold"
+              className="w-full h-12 rounded-2xl bg-button hover:bg-button/90 text-bg cursor-pointer font-semibold"
             >
               Get Started
             </Button>
