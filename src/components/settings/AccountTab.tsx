@@ -4,16 +4,24 @@ import React from 'react'
 import { Button } from '../ui/button'
 import Image from 'next/image'
 import { Separator } from '../ui/separator'
+import { useAppDispatch } from '@/store/hooks'
+import { clearUser } from '@/store/slices/authSlice'
+import { persistor } from '@/store/store'
+import { useRouter } from 'next/navigation'
 
 const AccountTab = () => {
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+
     const handleChangePassword = () => {
         // Handle password change logic
         console.log("Change password clicked")
     }
 
     const handleLogout = () => {
-        // Handle logout logic
-        console.log("Logout clicked")
+        dispatch(clearUser());
+        persistor.purge();
+        router.replace("/auth/login");
     }
 
     const handleDeleteAccount = () => {

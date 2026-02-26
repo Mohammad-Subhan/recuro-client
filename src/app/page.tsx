@@ -43,14 +43,14 @@ const LandingPage = () => {
           </div>
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/auth/login')}
               variant="ghost"
               className="text-text hover:text-text hover:bg-bg-secondary cursor-pointer rounded-2xl"
             >
               Login
             </Button>
             <Button
-              onClick={() => router.push('/register')}
+              onClick={() => router.push('/auth/register')}
               className="bg-button text-bg hover:bg-button/95 rounded-2xl cursor-pointer"
             >
               Get Started
@@ -76,7 +76,7 @@ const LandingPage = () => {
 
           <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
             <Button
-              onClick={() => router.push('/register')}
+              onClick={() => router.push('/auth/register')}
               className="bg-button text-bg hover:bg-button/95 rounded-2xl h-12 px-8 text-base font-semibold cursor-pointer"
             >
               <Image src="/icons/record.svg" alt="record" width={20} height={20} />

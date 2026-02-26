@@ -1,6 +1,9 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Manrope } from "next/font/google";
+import type { Metadata } from "next"
+import "./globals.css"
+import { Manrope } from "next/font/google"
+import { Toaster } from "react-hot-toast"
+import ReduxProvider from "@/components/providers/ReduxProvider"
+import AuthGuard from "@/components/guards/AuthGuard"
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -14,7 +17,19 @@ export const metadata: Metadata = {
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <html lang="en" className={manrope.className}>
-      <body className="bg-bg text-text min-h-dvh antialiased">{children}</body>
+      <body className="bg-bg text-text min-h-dvh antialiased">
+        <ReduxProvider>
+          <AuthGuard>
+            <main>
+              {children}
+            </main>
+          </AuthGuard>
+          <Toaster
+            toastOptions={{
+              duration: 3000
+            }} />
+        </ReduxProvider>
+      </body>
     </html>
   );
 };
