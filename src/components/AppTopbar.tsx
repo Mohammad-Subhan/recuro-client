@@ -13,11 +13,32 @@ import {
     SelectTrigger,
     SelectValue
 } from './ui/select'
+import { useAppSelector, useAppDispatch } from '@/store/hooks'
+import { useRouter } from 'next/navigation'
+import { clearUser } from '@/store/slices/authSlice'
+import { persistor } from '@/store/store'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from './ui/dropdown-menu'
 
 const AppTopbar = () => {
     const [showRecordModal, setShowRecordModal] = useState(false)
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [showRecordFormModal, setShowRecordFormModal] = useState(false)
+    const user = useAppSelector((state) => state.auth.user)
+    const dispatch = useAppDispatch()
+    const router = useRouter()
+
+    const handleLogout = () => {
+        dispatch(clearUser())
+        persistor.purge()
+        router.replace('/auth/login')
+    }
 
     const handleRecordClick = () => {
         setShowRecordModal(true)
@@ -69,7 +90,55 @@ const AppTopbar = () => {
                         <Image src={"/icons/record.svg"} alt="record" width={16} height={16} />
                         Record
                     </Button>
-                    <div className="rounded-full bg-button h-9 w-9 cursor-pointer"></div>
+                    {/* User Avatar + Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <div className="rounded-full bg-button h-9 w-9 cursor-pointer overflow-hidden flex items-center justify-center flex-shrink-0 border border-border outline-none">
+                                {user?.profileImage ? (
+                                    <Image
+                                        src={user.profileImage}
+                                        alt="Profile"
+                                        width={36}
+                                        height={36}
+                                        className="object-cover w-full h-full"
+                                    />
+                                ) : (
+                                    <span className="text-sm font-semibold text-bg select-none">
+                                        {user?.fullName?.[0]?.toUpperCase() ?? "?"}
+                                    </span>
+                                )}
+                            </div>
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent
+                            align="end"
+                            className="w-52 bg-bg border-border rounded-2xl p-1.5"
+                        >
+                            {/* User info label */}
+                            <DropdownMenuLabel className="px-3 py-2">
+                                <p className="text-sm font-semibold text-text truncate">{user?.fullName}</p>
+                                <p className="text-xs text-text-secondary font-normal truncate">{user?.email}</p>
+                            </DropdownMenuLabel>
+
+                            <DropdownMenuSeparator className="bg-border" />
+
+                            <DropdownMenuItem
+                                className="flex items-center gap-3 px-3 py-2.5 text-sm text-text rounded-xl cursor-pointer hover:bg-bg-secondary focus:bg-bg-secondary"
+                                onClick={() => router.push('/dashboard/settings')}
+                            >
+                                <Image src="/icons/settings-active.svg" alt="Settings" width={16} height={16} />
+                                Settings
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                                className="flex items-center gap-3 px-3 py-2.5 text-sm text-red-500 rounded-xl cursor-pointer hover:bg-red-500/10 focus:bg-bg-secondary hover:text-red-500 focus:text-red-500"
+                                onClick={handleLogout}
+                            >
+                                <Image src="/icons/arrow-left-red.svg" alt="Logout" width={16} height={16} />
+                                Logout
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 

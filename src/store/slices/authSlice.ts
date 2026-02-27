@@ -6,6 +6,7 @@ interface AuthState {
         _id: string,
         fullName: string,
         email: string,
+        profileImage: string | null,
     } | null,
     isAuthenticated: boolean,
 };
@@ -20,8 +21,13 @@ const authSlice = createSlice({
     name: "auth",
     initialState,
     reducers: {
-        setUser: (state, action: PayloadAction<{ _id: string, fullName: string, email: string }>) => {
-            state.user = action.payload;
+        setUser: (state, action: PayloadAction<{ _id: string, fullName: string, email: string, profileImage?: string | null }>) => {
+            state.user = {
+                _id: action.payload._id,
+                fullName: action.payload.fullName,
+                email: action.payload.email,
+                profileImage: action.payload.profileImage ?? null,
+            };
             state.isAuthenticated = true;
         },
         setAccessToken: (state, action: PayloadAction<string>) => {
