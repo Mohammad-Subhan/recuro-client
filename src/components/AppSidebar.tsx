@@ -1,11 +1,14 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Sidebar, SidebarContent } from './ui/sidebar'
 import Image from 'next/image'
 import { Separator } from './ui/separator'
 import { Button } from './ui/button'
 import { useRouter, usePathname } from 'next/navigation'
+import toast from 'react-hot-toast'
+import api from '@/lib/api'
+import { useAppSelector } from '@/store/hooks'
 
 const menuItems = [
     {
@@ -35,8 +38,26 @@ const menuItems = [
 ];
 
 const AppSidebar = () => {
-
     const pathname = usePathname()
+    const { fetchTrigger } = useAppSelector(s => s.video)
+    const [storageUsed, setStorageUsed] = useState(0)
+    const [storageLimit, setStorageLimit] = useState(1024 * 1024 * 1024)
+
+    useEffect(() => {
+        api.get('/api/user/me')
+            .then(res => {
+                const u = res.data.data.user
+                setStorageUsed(u.storageUsed ?? 0)
+                setStorageLimit(u.storageLimit ?? 1024 * 1024 * 1024)
+            })
+            .catch(err => console.error("Failed to fetch storage stats", err))
+    }, [fetchTrigger])
+
+    // Format metrics
+    const usedMb = (storageUsed / (1024 * 1024)).toFixed(0)
+    const limitGb = (storageLimit / (1024 * 1024 * 1024)).toFixed(0)
+    const percent = Math.min(100, Math.max(0, (storageUsed / storageLimit) * 100))
+
     return (
         <Sidebar className="bg-bg border-none">
             <SidebarContent className="flex flex-col w-full h-full px-[30px] py-[35px] gap-[60px]">
@@ -53,6 +74,19 @@ const AppSidebar = () => {
                         ))}
                     </div>
 
+                    <div className="flex flex-col gap-2 mt-2 px-1">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="font-semibold text-text">Storage</span>
+                            <span className="text-text-secondary">{usedMb} MB / {limitGb} GB</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-bg-secondary rounded-full overflow-hidden border border-border">
+                            <div 
+                                className="h-full bg-button transition-all duration-500 rounded-full"
+                                style={{ width: `${percent}%` }}
+                            />
+                        </div>
+                    </div>
+
                     <Separator className="bg-border" />
 
                     <div className="flex flex-col gap-7 px-[15px] py-[18px] border border-border rounded-2xl w-full">
@@ -61,7 +95,12 @@ const AppSidebar = () => {
                             <p className="text-xs text-text-secondary">Unlock unlimited videos, AI features like transcription, AI summary and more</p>
                         </div>
 
-                        <Button className="bg-button w-full rounded-2xl text-bg cursor-pointer hover:bg-button/95 font-semibold text-[14px]">Upgrade</Button>
+                        <Button
+                            onClick={() => toast("Coming soon!")}
+                            className="bg-button w-full rounded-2xl text-bg cursor-pointer hover:bg-button/95 font-semibold text-[14px]"
+                        >
+                            Upgrade
+                        </Button>
                     </div>
                 </div>
             </SidebarContent>

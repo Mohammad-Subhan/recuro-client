@@ -14,7 +14,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     const [isReady, setIsReady] = useState(false);
 
     const isAuthRoute = pathname.startsWith(AUTH_ROUTES_PREFIX);
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || pathname.startsWith('/share');
 
     useEffect(() => {
         if (isAuthenticated && isAuthRoute) {

@@ -3,7 +3,7 @@
 import Heading from '@/components/Heading'
 import { Button } from '@/components/ui/button'
 import React from 'react'
-
+import toast from 'react-hot-toast'
 
 const Billing = () => {
     return (
@@ -24,6 +24,7 @@ const Billing = () => {
 
                 </div>
                 <Button
+                    onClick={() => toast("Coming soon!")}
                     className="w-fit px-8 h-10 rounded-2xl cursor-pointer hover:bg-button/95 bg-button text-bg"
                 >
                     Change Plan

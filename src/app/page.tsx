@@ -5,9 +5,11 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { CircleCheckBig } from 'lucide-react';
+import { useAppSelector } from '@/store/hooks';
 
 const LandingPage = () => {
   const router = useRouter()
+  const user = useAppSelector((state) => state.auth.user)
 
   const features = [
     {
@@ -42,19 +44,30 @@ const LandingPage = () => {
             <span className="text-2xl font-semibold">Recura</span>
           </div>
           <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/auth/login')}
-              variant="ghost"
-              className="text-text hover:text-text hover:bg-bg-secondary cursor-pointer rounded-2xl"
-            >
-              Login
-            </Button>
-            <Button
-              onClick={() => router.push('/auth/register')}
-              className="bg-button text-bg hover:bg-button/95 rounded-2xl cursor-pointer"
-            >
-              Get Started
-            </Button>
+            {user ? (
+              <Button
+                onClick={() => router.push('/dashboard')}
+                className="bg-button text-bg hover:bg-button/95 rounded-2xl cursor-pointer font-semibold px-6"
+              >
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => router.push('/auth/login')}
+                  variant="ghost"
+                  className="text-text hover:text-text hover:bg-bg-secondary cursor-pointer rounded-2xl"
+                >
+                  Login
+                </Button>
+                <Button
+                  onClick={() => router.push('/auth/register')}
+                  className="bg-button text-bg hover:bg-button/95 rounded-2xl cursor-pointer"
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -76,11 +89,11 @@ const LandingPage = () => {
 
           <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
             <Button
-              onClick={() => router.push('/auth/register')}
+              onClick={() => router.push(user ? '/dashboard' : '/auth/register')}
               className="bg-button text-bg hover:bg-button/95 rounded-2xl h-12 px-8 text-base font-semibold cursor-pointer"
             >
               <Image src="/icons/record.svg" alt="record" width={20} height={20} />
-              Start Recording Free
+              {user ? 'Go to Dashboard' : 'Start Recording Free'}
             </Button>
           </div>
         </div>
@@ -243,10 +256,10 @@ const LandingPage = () => {
             Join thousands of creators who trust Recura for their screen recording needs.
           </p>
           <Button
-            onClick={() => router.push('/register')}
+            onClick={() => router.push(user ? '/dashboard' : '/register')}
             className="bg-button text-bg hover:bg-button/95 rounded-2xl h-12 px-8 text-base font-semibold cursor-pointer"
           >
-            Get Started for Free
+            {user ? 'Go to Dashboard' : 'Get Started for Free'}
           </Button>
         </div>
       </section>
