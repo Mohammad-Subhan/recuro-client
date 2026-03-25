@@ -8,8 +8,6 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-type TabType = 'transcription'
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const formatDuration = (seconds: number): string => {
     if (!seconds || seconds === 0) return '0:00'
@@ -53,7 +51,6 @@ const Skeleton = ({ className }: { className?: string }) => (
 // ─── Share Page ───────────────────────────────────────────────────────────────
 const SharePage = ({ params }: { params: Promise<{ shareLink: string }> }) => {
     const { shareLink } = React.use(params)
-    const [activeTab, setActiveTab] = useState<TabType>('transcription')
     const [video, setVideo] = useState<Video | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -163,35 +160,28 @@ const SharePage = ({ params }: { params: Promise<{ shareLink: string }> }) => {
                         </div>
                     </div>
 
-                    {/* ── Right Side - Tabs ───────────────────────────────── */}
+                    {/* ── Right Side - Transcription ───────────────────────────────── */}
                     <div className="w-full lg:w-[400px] flex flex-col gap-6">
                         <div className="flex items-center gap-6 relative">
-                            <Button
-                                onClick={() => setActiveTab('transcription')}
-                                className={`text-sm font-medium pb-3 cursor-pointer relative transition-colors duration-200 ${activeTab === 'transcription' ? 'text-text' : 'text-text/40 hover:text-text'}`}
-                            >
+                            <div className="text-sm font-medium pb-3 relative transition-colors duration-200 text-text">
                                 Transcription
-                                {activeTab === 'transcription' && (
-                                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-text rounded-full animate-slideIn" />
-                                )}
-                            </Button>
+                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-text rounded-full animate-slideIn" />
+                            </div>
                             <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border -z-10" />
                         </div>
-                        <div key={activeTab}>
-                            {loading ? (
-                                <div className="flex flex-col gap-6 animate-fadeIn">
-                                    <Skeleton className="h-6 w-32" />
-                                    <div className="p-5 rounded-xl border border-border bg-bg-secondary/30 flex flex-col gap-3">
-                                        <Skeleton className="h-3 w-full" />
-                                        <Skeleton className="h-3 w-5/6" />
-                                        <Skeleton className="h-3 w-4/6" />
-                                        <Skeleton className="h-3 w-full" />
-                                    </div>
+                        {loading ? (
+                            <div className="flex flex-col gap-6 animate-fadeIn">
+                                <Skeleton className="h-6 w-32" />
+                                <div className="p-5 rounded-xl border border-border bg-bg-secondary/30 flex flex-col gap-3">
+                                    <Skeleton className="h-3 w-full" />
+                                    <Skeleton className="h-3 w-5/6" />
+                                    <Skeleton className="h-3 w-4/6" />
+                                    <Skeleton className="h-3 w-full" />
                                 </div>
-                            ) : (
-                                <TranscriptionTab transcription={video?.transcription || "No transcription available"} />
-                            )}
-                        </div>
+                            </div>
+                        ) : (
+                            <TranscriptionTab transcription={video?.transcription || ""} />
+                        )}
                     </div>
                 </div>
             </main>
