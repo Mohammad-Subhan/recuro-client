@@ -22,6 +22,37 @@ import {
 import toast from 'react-hot-toast'
 import api from '@/lib/api'
 
+// ─── Helper function to generate a thumbnail dynamically ─────────────────────
+const generateVideoThumbnail = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+        const videoElement = document.createElement("video");
+        videoElement.src = URL.createObjectURL(file);
+        videoElement.crossOrigin = "anonymous";
+        videoElement.muted = true;
+
+        videoElement.onloadedmetadata = () => {
+            // grab frame at 0.5s, or middle if duration is shorter
+            videoElement.currentTime = Math.min(0.5, videoElement.duration / 2);
+        };
+
+        videoElement.onseeked = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return reject("Failed to get canvas context");
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                if (!blob) return reject("Blob generation failed");
+                const thFile = new File([blob], `generated_thumb_${Date.now()}.jpg`, { type: "image/jpeg" });
+                resolve(thFile);
+                URL.revokeObjectURL(videoElement.src); // cleanup
+            }, "image/jpeg", 0.8);
+        };
+        videoElement.onerror = (e) => reject(e);
+    });
+};
+
 const AppTopbar = () => {
     const [showRecordModal, setShowRecordModal] = useState(false)
     const [showUploadModal, setShowUploadModal] = useState(false)
@@ -36,6 +67,10 @@ const AppTopbar = () => {
     const [isVideoDragging, setIsVideoDragging] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [isUploading, setIsUploading] = useState(false)
+
+    // Recorder state
+    const [isRecording, setIsRecording] = useState(false)
+    const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
 
     const user = useAppSelector((state) => state.auth.user)
     const dispatch = useAppDispatch()
@@ -60,6 +95,12 @@ const AppTopbar = () => {
             toast.error("Please upload a valid image file")
             return
         }
+        // verify file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Thumbnail must be smaller than 5MB")
+            return
+        }
+
         setThumbnail(file)
     }
 
@@ -82,6 +123,12 @@ const AppTopbar = () => {
             toast.error("Please upload a valid video file")
             return
         }
+        // verify file size (100MB limit)
+        if (file.size > 100 * 1024 * 1024) {
+            toast.error("Video file must be smaller than 100MB")
+            return
+        }
+
         setVideo(file)
     }
 
@@ -103,9 +150,16 @@ const AppTopbar = () => {
             return
         }
 
-        if (!thumbnail) {
-            toast.error("Please select a thumbnail image")
-            return
+        let finalThumbnail = thumbnail;
+        if (!finalThumbnail) {
+            // Automatically generate a thumbnail from the video itself
+            try {
+                finalThumbnail = await generateVideoThumbnail(video);
+            } catch (err) {
+                console.error("Thumbnail generation error:", err);
+                toast.error("Failed to generate default thumbnail from video");
+                return;
+            }
         }
 
         try {
@@ -115,7 +169,7 @@ const AppTopbar = () => {
             // Create FormData
             const formData = new FormData()
             formData.append('video', video)
-            formData.append('thumbnail', thumbnail)
+            formData.append('thumbnail', finalThumbnail)
             formData.append('title', title)
             formData.append('description', description)
 
@@ -140,6 +194,7 @@ const AppTopbar = () => {
             setVideo(null)
             setThumbnail(null)
             setShowUploadModal(false)
+            setShowRecordFormModal(false)
             setUploadProgress(0)
 
             // Dispatch refetch to refresh the library page instantly
@@ -161,9 +216,47 @@ const AppTopbar = () => {
         setShowUploadModal(true)
     }
 
-    const handleClickToRecord = () => {
-        setShowRecordModal(false)
-        setShowRecordFormModal(true)
+    const handleClickToRecord = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { displaySurface: "monitor" },
+                audio: true,
+            });
+
+            // If user cancels, it throws an error.
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks: BlobPart[] = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const file = new File([blob], `Recura_ScreenRecord_${Date.now()}.webm`, { type: 'video/webm' });
+                setVideo(file);
+
+                // Close streams
+                stream.getTracks().forEach(track => track.stop());
+
+                setIsRecording(false);
+                setShowRecordModal(false);
+                setShowRecordFormModal(true);
+            };
+
+            recorder.start();
+            setMediaRecorder(recorder);
+            setIsRecording(true);
+
+            // Handle browser built-in 'Stop sharing' button
+            stream.getVideoTracks()[0].onended = () => {
+                if (recorder.state !== "inactive") recorder.stop();
+            };
+        } catch (err) {
+            console.error("Recording error:", err);
+            // Non-fatal, user just opted out / canceled the permission
+            // toast.error("Recording canceled or permission denied.");
+        }
     }
 
     const handleCloseModal = () => {
@@ -277,13 +370,26 @@ const AppTopbar = () => {
                                 <h2 className="text-xl font-semibold text-text">Recura</h2>
                             </div>
 
-                            <Button
-                                onClick={handleClickToRecord}
-                                className="w-full bg-button rounded-2xl text-bg cursor-pointer hover:bg-button/95 font-semibold text-[14px] h-11"
-                            >
-                                <Image src={"/icons/record.svg"} alt="record" width={18} height={18} />
-                                Click to Record
-                            </Button>
+                            {isRecording ? (
+                                <Button
+                                    onClick={() => {
+                                        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                                            mediaRecorder.stop();
+                                        }
+                                    }}
+                                    className="w-full bg-red-500 rounded-2xl text-white cursor-pointer hover:bg-red-600 font-semibold text-[14px] h-11"
+                                >
+                                    Stop Recording
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={handleClickToRecord}
+                                    className="w-full bg-button rounded-2xl text-bg cursor-pointer hover:bg-button/95 font-semibold text-[14px] h-11"
+                                >
+                                    <Image src={"/icons/record.svg"} alt="record" width={18} height={18} />
+                                    Click to Record
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -308,7 +414,8 @@ const AppTopbar = () => {
                             {/* Close Button */}
                             <Button
                                 onClick={handleCloseModal}
-                                className="absolute p-0 cursor-pointer -top-0 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                                disabled={isUploading}
+                                className={`absolute p-0 -top-0 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                             >
                                 <Image src={"/icons/close.svg"} alt="Close" width={18} height={18} />
                             </Button>
@@ -329,6 +436,7 @@ const AppTopbar = () => {
                                         onChange={(e) => setTitle(e.target.value)}
                                         placeholder="Enter your video title"
                                         className="bg-input-bg border-input-border text-text h-11 rounded-2xl px-4"
+                                        disabled={isUploading}
                                     />
                                 </div>
 
@@ -339,7 +447,8 @@ const AppTopbar = () => {
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         placeholder="Enter what video is about"
-                                        className="bg-input-bg border border-input-border text-text rounded-2xl px-4 py-3 min-h-[100px] resize-none text-sm placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-border"
+                                        className="bg-input-bg border border-input-border text-text rounded-2xl px-4 py-3 min-h-[100px] resize-none text-sm placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-border disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={isUploading}
                                     />
                                 </div>
 
@@ -350,21 +459,30 @@ const AppTopbar = () => {
                                         onDragOver={handleVideoDragOver}
                                         onDragLeave={handleVideoDragLeave}
                                         onDrop={handleVideoDrop}
-                                        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-2 hover:border-border transition-colors cursor-pointer ${isVideoDragging ? 'border-border bg-input-bg/20' : 'border-input-border bg-input-bg'}`}>
+                                        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-2 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-border cursor-pointer'} ${isVideoDragging ? 'border-border bg-input-bg/20' : 'border-input-border bg-input-bg'}`}>
                                         <Input
                                             type="file"
                                             accept=".mp4,.mov"
                                             className="hidden"
-                                            onChange={(e) => setVideo(e.target.files?.[0] ?? null)}
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0]
+                                                if (file && file.size > 100 * 1024 * 1024) {
+                                                    toast.error("Video file must be smaller than 100MB");
+                                                    return;
+                                                }
+                                                setVideo(file ?? null);
+                                            }}
+                                            disabled={isUploading}
                                         />
                                         {video ? (
                                             <div className="flex items-center gap-4 relative w-full">
                                                 <button
                                                     onClick={(e) => {
                                                         e.preventDefault()
-                                                        setVideo(null)
+                                                        if (!isUploading) setVideo(null)
                                                     }}
-                                                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
+                                                    className={`absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600 cursor-pointer'}`}
+                                                    disabled={isUploading}
                                                 >
                                                     <Image src="/icons/trash.svg" alt="Remove" width={12} height={12} />
                                                 </button>
@@ -385,27 +503,36 @@ const AppTopbar = () => {
 
                                 {/* Thumbnail Upload Area */}
                                 <div className="flex flex-col gap-2">
-                                    <Label className="text-sm font-medium text-text">Thumbnail</Label>
+                                    <Label className="text-sm font-medium text-text">Thumbnail <span className="text-xs text-text-placeholder">(Optional)</span></Label>
                                     <label
                                         onDragOver={handleThumbnailDragOver}
                                         onDragLeave={handleThumbnailDragLeave}
                                         onDrop={handleThumbnailDrop}
-                                        className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-border transition-colors cursor-pointer bg-input-bg/30 ${isThumbnailDragging ? 'border-border' : 'border-input-border'} ${thumbnail ? 'p-4' : 'p-8'}`}
+                                        className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors bg-input-bg/30 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-border cursor-pointer'} ${isThumbnailDragging ? 'border-border' : 'border-input-border'} ${thumbnail ? 'p-4' : 'p-8'}`}
                                     >
                                         <Input
                                             type="file"
                                             accept=".jpg,.png"
                                             className="hidden"
-                                            onChange={(e) => setThumbnail(e.target.files?.[0] ?? null)}
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0]
+                                                if (file && file.size > 5 * 1024 * 1024) {
+                                                    toast.error("Thumbnail must be smaller than 5MB");
+                                                    return;
+                                                }
+                                                setThumbnail(file ?? null);
+                                            }}
+                                            disabled={isUploading}
                                         />
                                         {thumbnail ? (
                                             <div className="w-full max-w-[500px] aspect-[4/3] relative rounded-lg overflow-hidden bg-bg">
                                                 <button
                                                     onClick={(e) => {
                                                         e.preventDefault()
-                                                        setThumbnail(null)
+                                                        if (!isUploading) setThumbnail(null)
                                                     }}
-                                                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors z-10 cursor-pointer"
+                                                    className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center transition-colors z-10 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600 cursor-pointer'}`}
+                                                    disabled={isUploading}
                                                 >
                                                     <Image src="/icons/trash.svg" alt="Remove" width={12} height={12} />
                                                 </button>
@@ -471,7 +598,8 @@ const AppTopbar = () => {
                         {/* Close Button */}
                         <Button
                             onClick={handleCloseModal}
-                            className="absolute p-0 cursor-pointer top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition-colors z-10"
+                            disabled={isUploading}
+                            className={`absolute p-0 top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition-colors z-10 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                             <Image src={"/icons/close.svg"} alt="Close" width={18} height={18} />
                         </Button>
@@ -489,8 +617,11 @@ const AppTopbar = () => {
                                 <Label className="text-sm font-medium text-text">Title</Label>
                                 <Input
                                     type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Enter your video title"
-                                    className="bg-input-bg border-input-border text-text h-11 rounded-2xl px-4"
+                                    className="bg-input-bg border-input-border text-text h-11 rounded-2xl px-4 disabled:opacity-50"
+                                    disabled={isUploading}
                                 />
                             </div>
 
@@ -498,31 +629,100 @@ const AppTopbar = () => {
                             <div className="flex flex-col gap-2">
                                 <Label className="text-sm font-medium text-text">Description</Label>
                                 <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Enter what video is about"
-                                    className="bg-input-bg border border-input-border text-text rounded-2xl px-4 py-3 min-h-[100px] resize-none text-sm placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-border"
+                                    className="bg-input-bg border border-input-border text-text rounded-2xl px-4 py-3 min-h-[100px] resize-none text-sm placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-border disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={isUploading}
                                 />
                             </div>
 
                             {/* Thumbnail Upload Area */}
                             <div className="flex flex-col gap-2">
-                                <Label className="text-sm font-medium text-text">Thumbnail</Label>
-                                <div className="border-2 border-dashed border-input-border rounded-2xl p-12 flex flex-col items-center justify-center gap-2 hover:border-border transition-colors cursor-pointer bg-input-bg/30">
-                                    <p className="text-sm text-text-secondary">Click to upload your thumbnail or drag your content here</p>
-                                    <p className="text-xs text-text-placeholder">Supported files: .mp4, .MOV</p>
-                                </div>
+                                <Label className="text-sm font-medium text-text">Thumbnail<span className="text-xs text-text-placeholder">(Optional)</span></Label>
+                                <label
+                                    onDragOver={handleThumbnailDragOver}
+                                    onDragLeave={handleThumbnailDragLeave}
+                                    onDrop={handleThumbnailDrop}
+                                    className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors bg-input-bg/30 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-border cursor-pointer'} ${isThumbnailDragging ? 'border-border' : 'border-input-border'} ${thumbnail ? 'p-4' : 'p-8'}`}
+                                >
+                                    <Input
+                                        type="file"
+                                        accept=".jpg,.png,.webp"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file && file.size > 5 * 1024 * 1024) {
+                                                toast.error("Thumbnail must be smaller than 5MB");
+                                                return;
+                                            }
+                                            setThumbnail(file ?? null);
+                                        }}
+                                        disabled={isUploading}
+                                    />
+                                    {thumbnail ? (
+                                        <div className="w-full max-w-[500px] aspect-[4/3] relative rounded-lg overflow-hidden bg-bg">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    if (!isUploading) setThumbnail(null)
+                                                }}
+                                                className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center transition-colors z-10 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600 cursor-pointer'}`}
+                                                disabled={isUploading}
+                                            >
+                                                <Image src="/icons/trash.svg" alt="Remove" width={12} height={12} />
+                                            </button>
+                                            <Image
+                                                src={URL.createObjectURL(thumbnail)}
+                                                alt="Thumbnail preview"
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-sm text-text-secondary">Click to upload your thumbnail or drag your content here</p>
+                                            <p className="text-xs text-text-placeholder">Supported files: .jpg, .png</p>
+                                        </>
+                                    )}
+                                </label>
                             </div>
+
+                            {/* Upload Progress Bar */}
+                            {isUploading && (
+                                <div className="flex flex-col gap-2">
+                                    <div className="w-full bg-input-border rounded-full h-2 overflow-hidden">
+                                        <div
+                                            className="bg-button h-full transition-all duration-300"
+                                            style={{ width: `${uploadProgress}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-3 pt-2">
                                 <Button
                                     onClick={handleCloseModal}
                                     variant="ghost"
-                                    className="flex-1 bg-transparent border border-border hover:bg-border text-text rounded-2xl h-11 font-medium cursor-pointer"
+                                    className="flex-1 bg-transparent border border-border hover:bg-border text-text rounded-2xl h-11 font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                    disabled={isUploading}
                                 >
                                     Cancel
                                 </Button>
-                                <Button className="flex-1 bg-button rounded-2xl text-bg cursor-pointer hover:bg-button/95 font-semibold text-[14px] h-11">
-                                    Confirm
+                                <Button
+                                    onClick={handleUpload}
+                                    disabled={isUploading}
+                                    className="flex-1 bg-button rounded-2xl text-bg cursor-pointer hover:bg-button/95 font-semibold text-[14px] h-11 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isUploading ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-bg border-t-transparent rounded-full animate-spin" />
+                                            Uploading... {uploadProgress}%
+                                        </>
+                                    ) : (
+                                        "Confirm"
+                                    )}
                                 </Button>
                             </div>
                         </div>
