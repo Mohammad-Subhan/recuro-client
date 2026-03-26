@@ -14,24 +14,29 @@ const LandingPage = () => {
   const features = [
     {
       icon: "/icons/video-camera.svg",
-      title: "Instant Recording",
-      description: "Start recording your screen with just one click. No complex setup required."
+      title: "Screen Recording",
+      description: "Record screen with system audio and microphone. Automatic stop at 20MB limit for optimal file sizes."
+    },
+    {
+      icon: "/icons/upload.svg",
+      title: "File Upload",
+      description: "Upload existing videos (MP4, MOV, WebM) up to 20MB with automatic thumbnail generation."
     },
     {
       icon: "/icons/ai-light.svg",
-      title: "AI-Powered Tools",
-      description: "Automatically generate titles, descriptions, and transcriptions for your videos."
+      title: "AI Transcription",
+      description: "Generate accurate video transcriptions using Groq Whisper AI with one click."
     },
     {
-      icon: "/icons/library.svg",
-      title: "Organized Library",
-      description: "Keep all your recordings organized and easily accessible in one place."
+      icon: "/icons/library-active.svg",
+      title: "Video Library",
+      description: "Organize, search, and manage all your videos with detailed metadata and editing capabilities."
     },
     {
       icon: "/icons/share.svg",
-      title: "Easy Sharing",
-      description: "Upload and share your recordings with anyone, anywhere, anytime."
-    }
+      title: "Secure Sharing",
+      description: "Share videos with unique, secure links. Download videos anytime, anywhere."
+    },
   ]
 
   return (
@@ -83,8 +88,8 @@ const LandingPage = () => {
           </h1>
 
           <p className="text-xl text-text-secondary max-w-2xl leading-relaxed">
-            The modern screen recording platform built for creators, educators, and teams.
-            Capture your screen with AI-powered features that save you time.
+            Record your screen with dual audio capture, upload videos, generate AI transcriptions,
+            and share securely. All in one powerful platform.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
@@ -107,11 +112,11 @@ const LandingPage = () => {
             <span className="block">record and share</span>
           </h2>
           <p className="text-xl text-text-secondary max-w-2xl mx-auto">
-            Powerful features designed to make screen recording effortless and professional.
+            Record, upload, transcribe, and share videos with powerful features designed for efficiency.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -138,16 +143,16 @@ const LandingPage = () => {
       <section className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-3 gap-8 p-12 rounded-2xl bg-bg-secondary border border-border">
           <div className="text-center">
-            <div className="text-5xl font-bold mb-2">10K+</div>
-            <div className="text-text-secondary">Active Users</div>
+            <div className="text-5xl font-bold mb-2">20MB</div>
+            <div className="text-text-secondary">Max Video Size</div>
           </div>
           <div className="text-center">
-            <div className="text-5xl font-bold mb-2">50K+</div>
-            <div className="text-text-secondary">Videos Recorded</div>
+            <div className="text-5xl font-bold mb-2">1GB</div>
+            <div className="text-text-secondary">Free Storage</div>
           </div>
           <div className="text-center">
-            <div className="text-5xl font-bold mb-2">99.9%</div>
-            <div className="text-text-secondary">Uptime</div>
+            <div className="text-5xl font-bold mb-2">AI</div>
+            <div className="text-text-secondary">Powered Transcription</div>
           </div>
         </div>
       </section>
@@ -181,7 +186,19 @@ const LandingPage = () => {
               </li>
               <li className="flex items-start gap-3">
                 <CircleCheckBig height={20} width={20} color="#00C950" />
-                <span className="text-text">5GB storage</span>
+                <span className="text-text">1GB storage</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CircleCheckBig height={20} width={20} color="#00C950" />
+                <span className="text-text">20MB max video size</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CircleCheckBig height={20} width={20} color="#00C950" />
+                <span className="text-text">AI transcription</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CircleCheckBig height={20} width={20} color="#00C950" />
+                <span className="text-text">Secure video sharing</span>
               </li>
               <li className="flex items-start gap-3">
                 <CircleCheckBig height={20} width={20} color="#00C950" />
@@ -220,15 +237,23 @@ const LandingPage = () => {
               </li>
               <li className="flex items-start gap-3">
                 <CircleCheckBig height={20} width={20} color="#00C950" />
-                <span className="text-text">100GB storage</span>
+                <span className="text-text">50GB storage</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CircleCheckBig height={20} width={20} color="#00C950" />
+                <span className="text-text">100MB max video size</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CircleCheckBig height={20} width={20} color="#00C950" />
+                <span className="text-text">Unlimited AI transcription</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CircleCheckBig height={20} width={20} color="#00C950" />
+                <span className="text-text">Advanced video analytics</span>
               </li>
               <li className="flex items-start gap-3">
                 <CircleCheckBig height={20} width={20} color="#00C950" />
                 <span className="text-text">Priority support</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CircleCheckBig height={20} width={20} color="#00C950" />
-                <span className="text-text">AI-powered features</span>
               </li>
               <li className="flex items-start gap-3">
                 <CircleCheckBig height={20} width={20} color="#00C950" />
@@ -253,7 +278,7 @@ const LandingPage = () => {
             Ready to start recording?
           </h2>
           <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
-            Join thousands of creators who trust Recura for their screen recording needs.
+            Start recording your screen with dual audio, generate AI transcriptions, and share your videos instantly.
           </p>
           <Button
             onClick={() => router.push(user ? '/dashboard' : '/register')}

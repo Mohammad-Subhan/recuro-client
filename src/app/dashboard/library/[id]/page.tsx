@@ -293,7 +293,7 @@ const VideoPage = ({ params }: { params: Promise<{ id: string }> }) => {
                             </div>
                             <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border -z-10" />
                         </div>
-                        <TranscriptionTab transcription={video?.transcription || ""} />
+                        <TranscriptionTab videoId={video?._id || ""} transcription={video?.transcription || ""} />
                     </div>
                 </div>
             </div>

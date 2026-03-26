@@ -4,26 +4,37 @@ import React, { useState } from 'react'
 import { Button } from '../ui/button'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
+import api from '@/lib/api'
+import { useRouter } from 'next/navigation'
 
-const TranscriptionTab = ({ transcription }: { transcription: string }) => {
+const TranscriptionTab = ({ videoId, transcription }: { videoId: string, transcription: string }) => {
     const [isGenerating, setIsGenerating] = useState(false);
+    const [currentTranscription, setCurrentTranscription] = useState(transcription);
+    const router = useRouter();
 
     const handleGenerateTranscription = async () => {
         setIsGenerating(true)
-        // Handle generative logic here
-        setTimeout(() => {
+        try {
+            const response = await api.post(`/api/library/${videoId}/transcribe`)
+            setCurrentTranscription(response.data.data.transcription)
+            toast.success("Transcription generated successfully!")
+            // Refresh the page to show updated transcription
+            router.refresh()
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || "Failed to generate transcription"
+            toast.error(errorMessage)
+        } finally {
             setIsGenerating(false)
-            toast.success("Transcription generated!")
-        }, 1500)
+        }
     }
 
     return (
         <div className="flex flex-col gap-6 animate-fadeIn">
             <div className="flex flex-col gap-4">
-                {transcription ? (
+                {currentTranscription ? (
                     <div className="p-5 rounded-xl border border-border bg-bg-secondary/30">
                         <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
-                            {transcription}
+                            {currentTranscription}
                         </p>
                     </div>
                 ) : (

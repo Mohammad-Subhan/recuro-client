@@ -123,9 +123,9 @@ const AppTopbar = () => {
             toast.error("Please upload a valid video file")
             return
         }
-        // verify file size (100MB limit)
-        if (file.size > 100 * 1024 * 1024) {
-            toast.error("Video file must be smaller than 100MB")
+        // verify file size (20MB limit)
+        if (file.size > 20 * 1024 * 1024) {
+            toast.error("Video file must be smaller than 20MB")
             return
         }
 
@@ -218,38 +218,124 @@ const AppTopbar = () => {
 
     const handleClickToRecord = async () => {
         try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({
+            // Request screen capture with system audio
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
                 video: { displaySurface: "monitor" },
-                audio: true,
+                audio: true, // System audio from screen/tab
             });
 
-            // If user cancels, it throws an error.
-            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            // Request microphone audio
+            let micStream: MediaStream | null = null;
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    }
+                });
+            } catch (micError) {
+                console.warn("Microphone access denied or unavailable:", micError);
+                // Continue without microphone - not a fatal error
+            }
+
+            // Combine video from display and audio from both sources
+            const videoTrack = displayStream.getVideoTracks()[0];
+            const audioTracks: MediaStreamTrack[] = [];
+
+            // Add system audio if available
+            const systemAudioTracks = displayStream.getAudioTracks();
+            if (systemAudioTracks.length > 0) {
+                audioTracks.push(...systemAudioTracks);
+            }
+
+            // Add microphone audio if available
+            if (micStream) {
+                const micAudioTracks = micStream.getAudioTracks();
+                audioTracks.push(...micAudioTracks);
+            }
+
+            // If we have multiple audio tracks, we need to mix them
+            let finalStream: MediaStream;
+            if (audioTracks.length > 1) {
+                // Create AudioContext to mix audio tracks
+                const audioContext = new AudioContext();
+                const destination = audioContext.createMediaStreamDestination();
+
+                // Add all audio tracks to the mix
+                audioTracks.forEach(track => {
+                    const source = audioContext.createMediaStreamSource(new MediaStream([track]));
+                    source.connect(destination);
+                });
+
+                // Combine video with mixed audio
+                finalStream = new MediaStream([
+                    videoTrack,
+                    ...destination.stream.getAudioTracks()
+                ]);
+            } else if (audioTracks.length === 1) {
+                // Single audio source, no mixing needed
+                finalStream = new MediaStream([videoTrack, audioTracks[0]]);
+            } else {
+                // No audio, video only
+                finalStream = new MediaStream([videoTrack]);
+                toast.error("No audio source available - recording video only");
+            }
+
+            const recorder = new MediaRecorder(finalStream, { mimeType: 'video/webm' });
             const chunks: BlobPart[] = [];
+            let accumulatedSize = 0;
+            const MAX_SIZE = 20 * 1024 * 1024; // 20MB limit
 
             recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                    accumulatedSize += e.data.size;
+
+                    // Check if size exceeds 20MB
+                    if (accumulatedSize >= MAX_SIZE) {
+                        if (recorder.state !== "inactive") {
+                            recorder.stop();
+                            toast.error("Recording stopped: 20MB limit reached");
+                        }
+                    }
+                }
             };
 
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
+
+                // Final check: if blob exceeds 20MB, show error and don't save
+                if (blob.size > MAX_SIZE + 2 * 1024 * 1024) { // Adding a small buffer for encoding overhead
+                    toast.error("Recording exceeds 20MB limit. Please record a shorter video.");
+                    displayStream.getTracks().forEach(track => track.stop());
+                    if (micStream) micStream.getTracks().forEach(track => track.stop());
+                    finalStream.getTracks().forEach(track => track.stop());
+                    setIsRecording(false);
+                    setShowRecordModal(false);
+                    return;
+                }
+
                 const file = new File([blob], `Recura_ScreenRecord_${Date.now()}.webm`, { type: 'video/webm' });
                 setVideo(file);
 
-                // Close streams
-                stream.getTracks().forEach(track => track.stop());
+                // Close all streams
+                displayStream.getTracks().forEach(track => track.stop());
+                if (micStream) micStream.getTracks().forEach(track => track.stop());
+                finalStream.getTracks().forEach(track => track.stop());
 
                 setIsRecording(false);
                 setShowRecordModal(false);
                 setShowRecordFormModal(true);
             };
 
-            recorder.start();
+            // Request data every second to monitor size
+            recorder.start(1000);
             setMediaRecorder(recorder);
             setIsRecording(true);
 
             // Handle browser built-in 'Stop sharing' button
-            stream.getVideoTracks()[0].onended = () => {
+            displayStream.getVideoTracks()[0].onended = () => {
                 if (recorder.state !== "inactive") recorder.stop();
             };
         } catch (err) {
@@ -466,8 +552,8 @@ const AppTopbar = () => {
                                             className="hidden"
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0]
-                                                if (file && file.size > 100 * 1024 * 1024) {
-                                                    toast.error("Video file must be smaller than 100MB");
+                                                if (file && file.size > 20 * 1024 * 1024) {
+                                                    toast.error("Video file must be smaller than 20MB");
                                                     return;
                                                 }
                                                 setVideo(file ?? null);
